@@ -1,33 +1,33 @@
-# 动手学大模型：GUI智能体构建
-## 本教程目标
-1.了解GUI智能体领域的技术路线和研究现状
+# 대형 모델 실습: GUI 에이전트 구축
+## 이 튜토리얼의 목표
+1. GUI Agent 분야의 기술경로 및 연구현황을 이해한다.
 
-2.尝试基于开源模型Qwen2-VL-7B依托OS-Kairos数据集构建自适应人机交互GUI智能体的方法
+2. 오픈 소스 모델 Qwen2-VL-7B를 기반으로 하고 OS-Kairos 데이터 세트를 사용하여 적응형 인간-컴퓨터 상호 작용 GUI 에이전트를 구축해 보십시오.
 
-3.尝试基于构建的GUI智能体进行推理
-## 1.准备工作
-### 1.1 了解GUI智能体领域的技术路线和研究现状
-阅读教程：[[Slides](https://github.com/Lordog/dive-into-llms/blob/main/documents/chapter8/GUIagent.pdf)]
+3. 구축된 GUI 에이전트를 기반으로 추론해 보세요.
+## 1. 준비
+### 1.1 GUI 에이전트의 기술 경로 및 연구 현황을 이해합니다.
+튜토리얼 읽기: [[슬라이드](https://github.com/gidaseul/dive-into-llms/blob/main/documents/chapter8/GUIagent.pdf)]
 
-### 1.2 了解什么是自适应人机交互GUI智能体
-参考论文：[[Paper](https://arxiv.org/abs/2503.16465)]
+### 1.2 적응형 인간-컴퓨터 상호작용 GUI 에이전트가 무엇인지 이해하기
+참고 논문: [[논문](https://arxiv.org/abs/2503.16465)]
 
-### 1.3 数据集准备
-本教程以OS-Kairos为例，基于此工作开源的数据集构建并推理简单的GUI智能体。
+### 1.3 데이터 세트 준비
+이 튜토리얼에서는 OS-Kairos를 예로 들어 이 작업의 오픈 소스 데이터 세트를 기반으로 간단한 GUI 에이전트를 구축하고 추론합니다.
 
-从[[Data](https://github.com/Wuzheng02/OS-Kairos)]的README.md文件中的下载链接下载数据集，并解压到环境中。
+[[Data](https://github.com/Wuzheng02/OS-Kairos)]의 README.md 파일에 있는 다운로드 링크에서 데이터 세트를 다운로드하고 환경에 추출합니다.
 
-数据格式示例如下：
+데이터 형식의 예는 다음과 같습니다.
 ```json
     {
-        "task": "打开网易云音乐，搜索《Shape of You》，并播放这首歌。",
+"task": "NetEase Cloud Music을 열고 "Shape of You"를 검색한 후 이 노래를 재생하세요.",
         "image_path": "/data1/wuzh/cloud_music/images/1736614680.6518524_1.png",
         "list": [
-            " 打开网易云音乐  ",
-            " 点击首页顶部的搜索框  ",
-            " 输入：Shape of You  ",
-            " 选择正确的搜索结果  ",
-            " 点击歌名以播放  "
+"NetEase 클라우드 음악 열기",
+"홈페이지 상단의 검색창을 클릭하세요",
+"입력:당신의 모양",
+"올바른 검색결과를 선택하세요",
+"재생하려면 노래 제목을 클릭하세요."
         ],
         "now_step": 1,
         "previous_actions": [
@@ -39,15 +39,15 @@
         "success": false
     },
 ```
-### 1.4 模型准备
-从[[Model](https://huggingface.co/Qwen/Qwen2-VL-7B-Instruct)]下载Qwen2-VL-7B模型权重。
+### 1.4 모델 준비
+[[모델](https://huggingface.co/Qwen/Qwen2-VL-7B-Instruct)]에서 Qwen2-VL-7B 모델 가중치를 다운로드합니다.
 
-## 1.5 有监督微调代码准备
-本教程采用LLaMa-Factory对Qwen2-VL-7B进行有监督微调，因此先从[[Code](https://github.com/hiyouga/LLaMA-Factory/)]下载源码。
+## 1.5 감독된 미세 조정 코드 준비
+이 튜토리얼에서는 LLaMa-Factory를 사용하여 Qwen2-VL-7B의 감독된 미세 조정을 수행하므로 먼저 [[Code](https://github.com/hiyouga/LLaMA-Factory/)]에서 소스 코드를 다운로드합니다.
 
-## 2.GUI智能体构建
-### 2.1 数据预处理
-将以下代码存储为get_sharpgpt.py，并向其填出Kairos_train.json和预计存储处理后的训练集json的路径，然后运行该文件。
+## 2.GUI 에이전트 구축
+### 2.1 데이터 전처리
+다음 코드를 get_sharpgpt.py로 저장하고, Kairos_train.json과 처리된 학습 세트 json이 저장될 경로를 입력한 후 파일을 실행합니다.
 ```python
 import json
 
@@ -144,10 +144,10 @@ for item in data:
 with open('', 'w', encoding='utf-8') as f:
     json.dump(preprocessed_data, f, ensure_ascii=False, indent=4)
 ```
-经过该步骤，我们将OS-Kairos的训练集成功转化为符合sharpgpt格式的数据，便于进行下一步训练，数据预处理完成。
-## 2.2 有监督微调
-在上一步中，我们已经得到适配LLaMa-Factory训练的格式的Kairos数据集。然后我们要修改LLaMa-Factory以注册数据集和配置训练信息。
-首先修改data/dataset_info.json，添加如下内容注册数据集：
+이 단계 후에 우리는 OS-Kairos 훈련 세트를 다음 훈련 단계에 편리한 Sharpgpt 형식을 따르는 데이터로 변환하고 데이터 전처리가 완료되었습니다.
+## 2.2 감독된 미세 조정
+이전 단계에서는 LLaMa-Factory 교육에 적합한 형식으로 Kairos 데이터 세트를 얻었습니다. 그런 다음 LLaMa-Factory를 수정하여 데이터 세트를 등록하고 훈련 정보를 구성해야 합니다.
+먼저 data/dataset_info.json을 수정하고 다음 내용을 추가하여 데이터 세트를 등록합니다.
 ```json
 "Karios" :{
   "file_name": "Karios_qwenscore.json",
@@ -164,7 +164,7 @@ with open('', 'w', encoding='utf-8') as f:
   }
 },   
 ```
-继续修改/examples/train_full/qwen2vl_full_sft.yaml来进行配置训练信息：
+교육 정보를 구성하려면 /examples/train_full/qwen2vl_full_sft.yaml을 계속 수정하세요.
 ```yaml
 ### model
 model_name_or_path: 
@@ -205,23 +205,23 @@ per_device_eval_batch_size: 1
 eval_strategy: steps
 eval_steps: 20000
 ```
-以上是一个示例配置，model_name_or_path是Qwen2-VL-7B的路径，output_dir是存放断点和log的路径。
-配置好后即可配置推理，示例命令行：
+위의 구성은 예시입니다. model_name_or_path는 Qwen2-VL-7B의 경로이고, output_dir은 중단점과 로그가 저장되는 경로입니다.
+구성한 후 추론을 구성할 수 있습니다. 명령줄 예시:
 ```
 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 FORCE_TORCHRUN=1 llamafactory-cli train examples/train_full/qwen2vl_full_sft.yaml
 ```
-此处至少要使用3张80GB的A100计算资源。
+여기에서는 최소 3개의 80GB A100 컴퓨팅 리소스를 사용해야 합니다.
 
-## 3.OS-Kairos推理验证
-训练完毕后，我们即可进行推理，推理也有很多种方法可以选择，可以自行通过transformers库和torch库构建推理代码，也可以采用LLaMa-Factory进行一键式推理，以下演示如何LLaMa-Factory进行一键式推理。
-首先要修改/examples/inference/qwen2_vl.yaml，一个示例如下
+## 3.OS-카이로스 추론 검증
+훈련 후에는 추론을 수행할 수 있습니다. 선택할 수 있는 방법은 다양합니다. 변환기 라이브러리 및 토치 라이브러리를 통해 직접 추론 코드를 구축하거나 원클릭 추론을 위해 LLaMa-Factory를 사용할 수 있습니다. 다음은 원클릭 추론을 위해 LLaMa-Factory를 사용하는 방법을 보여줍니다.
+먼저 /examples/inference/qwen2_vl.yaml을 수정해야 합니다. 예는 다음과 같습니다
 ```yaml
 model_name_or_path: 
 template: qwen2_vl
 ```
-其中model_name_or_path是训练后的断点路径。
-然后即可通过
+여기서 model_name_or_path는 훈련 후 중단점 경로입니다.
+그러면 합격할 수 있어요
 ```
 CUDA_VISIBLE_DEVICES=0 FORCE_TORCHRUN=1 llamafactory-cli webchat examples/inference/qwen2_vl.yaml
 ```
-进行一键式推理，你可以自己拿出OS-Kairos测试集的图片，或者个人手机的截图，结合get_sharpgpt.py中格式的文本prompt输入给智能体，OS-Karios推理后会给出它认为当前应该进行的action和对于这个action的置信度分数。置信度分数越低，则当前指令越超出OS-Kairos的能力边界，需要人类介入来进行人机交互。
+원클릭 추론을 위해서는 OS-Kairos 테스트 세트의 사진이나 개인 휴대폰의 스크린샷을 꺼내서 get_sharpgpt.py 형식으로 텍스트 프롬프트를 기반으로 에이전트에 입력하면 됩니다. OS-Karios 추론 후 현재 수행되어야 한다고 생각하는 작업과 이 작업에 대한 신뢰도 점수를 제공합니다. 신뢰도 점수가 낮을수록 현재 명령이 OS-Kairos의 기능 경계를 초과하고 인간과 컴퓨터 상호 작용을 위해 인간의 개입이 필요하다는 의미입니다.

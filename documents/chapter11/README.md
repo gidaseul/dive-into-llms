@@ -1,51 +1,48 @@
-# 动手学大模型：RLHF
+# 대형 모델을 이용한 실습 학습: RLHF
 
-> 本实验手册翻译并整合了网络资料 [blog](https://newfacade.github.io/notes-on-reinforcement-learning/17-ppo-trl.html) & [trl examples](https://github.com/huggingface/trl/blob/main/examples/notebooks/gpt2-sentiment.ipynb)
+> 본 실습 매뉴얼은 온라인 자료 [블로그](https://newfacade.github.io/notes-on-reinforcement-learning/17-ppo-trl.html) 및 [trl 예제](https://github.com/huggingface/trl/blob/main/examples/notebooks/gpt2-sentiment.ipynb)를 번역하고 통합한 것입니다.
 
-复现实验配置：单卡 NVDIA A800-SXM4-80GB 占用 10097MiB，训练耗时 35min19s。
+재현 실험 구성: 단일 카드 NVDIA A800-SXM4-80GB는 10097MiB를 차지하고 학습에는 35분 19초가 소요됩니다.
 
-阅读教程：[slide](./RLHF.pdf)
+튜토리얼 읽기: [슬라이드](./RLHF.pdf)
 
-notebook：[notebook](./RLHF.ipynb)
+노트북:[노트북](./RLHF.ipynb)
 
-## PPO 如何运作
-1. Rollout：语言模型根据 query 生成响应。
-2. Evaluation：查询和响应使用函数、模型、人工反馈或它们的某种组合进行评估。此过程应为每个查询/响应对生成一个**标量值**。
-3. Optimization：在优化步骤中，查询/响应对用于计算序列中标记的对数概率。这是通过训练的模型和参考模型完成的。两个输出之间的 KL 散度用作额外的奖励信号，以确保生成的响应不会偏离参考语言模型太远。然后使用 PPO 训练主动语言模型。
+## PPO 작동 방식
+1. 롤아웃: 언어 모델은 쿼리를 기반으로 응답을 생성합니다.
+2. 평가: 쿼리와 응답은 기능, 모델, 인간 피드백 또는 이들의 조합을 사용하여 평가됩니다. 이 프로세스는 각 쿼리/응답 쌍에 대해 **스칼라 값**을 생성해야 합니다.
+3. 최적화: 최적화 단계에서는 쿼리/응답 쌍을 사용하여 시퀀스에 있는 토큰의 로그 확률을 계산합니다. 이는 훈련된 모델과 참조 모델을 통해 수행됩니다. 두 출력 간의 KL 차이는 생성된 응답이 참조 언어 모델에서 너무 멀리 벗어나지 않도록 하기 위한 추가 보상 신호로 사용됩니다. 그런 다음 활성 언어 모델은 PPO를 사용하여 훈련됩니다.
 <div style="text-align: center">
 <img src='figs/trl1.png' width='600'>
-<p style="text-align: center;"> <b>图:</b> PPO 流程图 </p>
+<p style="text-align: center;"> <b> 그림: </b> PPO 흐름 차트 </p>
 </div>
 
-# 微调 GPT-2 以生成积极评论  
-> 通过使用 BERT 情感分类器作为奖励函数，优化 GPT-2 以生成积极的 IMDB 电影评论。
+# GPT-2를 미세 조정하여 긍정적인 리뷰 생성
+> BERT 감정 분류기를 보상 기능으로 사용하여 긍정적인 IMDB 영화 리뷰를 생성하도록 GPT-2를 최적화합니다.
 
 <div style="text-align: center">
 <img src='figs/gpt2_bert_training.png' width='600'>
-<p style="text-align: center;"> <b>图：</b> 微调 GPT-2 的实验设置</p>
+<p style="text-align: center;"> <b> 그림: </b> GPT-2에 대한 실험 설정 미세 조정 </p>
 </div>
 
-我们微调 GPT-2 以基于 IMDB 数据集生成积极的电影评论。该模型会接收真实评论的开头部分，并需要生成积极的后续内容。为了奖励积极的后续内容，我们使用 BERT 分类器来分析生成句子的情感，并将分类器的输出作为 PPO 训练的奖励信号。
+우리는 IMDB 데이터 세트를 기반으로 긍정적인 영화 리뷰를 생성하기 위해 GPT-2를 미세 조정합니다. 모델은 실제 검토의 시작을 받고 긍정적인 후속 콘텐츠를 생성해야 합니다. 긍정적인 후속 콘텐츠를 보상하기 위해 BERT 분류기를 사용하여 생성된 문장의 감정을 분석하고 분류기의 출력을 PPO 훈련에 대한 보상 신호로 사용합니다.
 
-## 实验设置
+## 실험적 설정
 
-### 下载模型和数据
-数据集
+### 모델 및 데이터 다운로드
+데이터세트
 ```bash
 export HF_ENDPOINT=https://hf-mirror.com; huggingface-cli download --resume-download stanfordnlp/imdb --local-dir dataset/imdb --repo-type dataset
 ```
-参考模型
+참조 모델
 ```bash
 export HF_ENDPOINT=https://hf-mirror.com; huggingface-cli download --resume-download lvwerra/gpt2-imdb --local-dir model/gpt2-imdb
 ```
-奖励模型
+보상 모델
 ```bash
 export HF_ENDPOINT=https://hf-mirror.com; huggingface-cli download --resume-download lvwerra/distilbert-imdb --local-dir model/distilbert-imdb
 ```
-
-### 导入依赖项
-
-
+### 종속성 가져오기
 ```python
 # %pip install -r requirements.txt
 # import os
@@ -66,10 +63,7 @@ from datasets import load_dataset
 from trl import PPOTrainer, PPOConfig, AutoModelForCausalLMWithValueHead
 from trl.core import LengthSampler
 ```
-
-### 配置
-
-
+### 구성
 ```python
 config = PPOConfig(
     model_name="model/gpt2-imdb",
@@ -86,15 +80,12 @@ import wandb
 
 wandb.init()
 ```
+`gpt2_imdb`이라는 GPT-2 모델을 로드한 것을 볼 수 있습니다. 이 모델은 Hugging Face의 [스크립트](https://github.com/huggingface/transformers/blob/main/examples/legacy/run_language_modeling.py)(특별 설정 없음)를 사용하여 IMDB 데이터 세트의 추가 1개 시대에 대해 미세 조정되었습니다. 나머지 매개변수는 주로 원본 논문 "[Fine-Tuning Language Models from Human Preferences](https://huggingface.co/papers/1909.08593)"에서 가져왔습니다. 이 모델과 BERT 모델은 모두 Hugging Face의 모델 라이브러리에서 사용할 수 있으며, 구체적인 링크는 [여기](https://huggingface.co/models)입니다.
 
-你可以看到我们加载了一个名为 `gpt2_imdb` 的 GPT-2 模型。该模型在 IMDB 数据集上额外微调了 1 个 epoch，使用的是 Hugging Face 的[脚本](https://github.com/huggingface/transformers/blob/main/examples/legacy/run_language_modeling.py)（无特殊设置）。其余参数主要取自原始论文《[Fine-Tuning Language Models from Human Preferences](https://huggingface.co/papers/1909.08593)》。该模型以及 BERT 模型均可在 Hugging Face 的模型库中获取，具体链接在[这里](https://huggingface.co/models)。
+## 데이터 및 모델 로드
 
-## 加载数据和模型
-
-### 加载 IMDB 数据集  
-IMDB 数据集包含了 50,000 条电影评论，并标注了“积极”/“消极”的情感反馈。我们将 IMDB 数据集加载到一个 DataFrame 中，并筛选出至少 200 个字符的评论。然后，我们对每条文本进行分词，并使用 `LengthSampler` 将其随机截断为指定长度。
-
-
+### IMDB 데이터 세트 로드
+IMDB 데이터 세트에는 "긍정적"/"부정적" 감정 피드백이 표시된 50,000개의 영화 리뷰가 포함되어 있습니다. IMDB 데이터 세트를 DataFrame에 로드하고 길이가 200자 이상인 리뷰를 필터링합니다. 그런 다음 각 텍스트 조각을 토큰화하고 `LengthSampler`를 사용하여 지정된 길이로 무작위로 자릅니다.
 ```python
 def build_dataset(
     config,
@@ -141,11 +132,8 @@ dataset = build_dataset(config)
 def collator(data):
     return dict((key, [d[key] for d in data]) for key in data[0])
 ```
-
-### 加载预训练的 GPT2 语言模型
-我们加载带有值头（value head）的 GPT2 模型和分词器。我们加载了两次模型；第一个模型用于优化，而第二个模型作为参考，用于计算与初始点的 KL 散度（KL-divergence）。这在 PPO 训练中作为额外的奖励信号，以确保优化后的模型不会偏离原始语言模型太远。
-
-
+### 사전 훈련된 GPT2 언어 모델 로드
+우리는 값 헤드를 사용하여 GPT2 모델과 토크나이저를 로드합니다. 모델을 두 번 로드했습니다. 첫 번째 모델은 최적화에 사용되었고, 두 번째 모델은 초기점으로부터 KL-divergence를 계산하기 위한 참조로 사용되었습니다. 이는 최적화된 모델이 원래 언어 모델에서 너무 멀리 벗어나지 않도록 PPO 교육 중에 추가 보너스 신호 역할을 합니다.
 ```python
 model = AutoModelForCausalLMWithValueHead.from_pretrained(config.model_name)
 ref_model = AutoModelForCausalLMWithValueHead.from_pretrained(config.model_name)
@@ -153,22 +141,15 @@ tokenizer = AutoTokenizer.from_pretrained(config.model_name)
 
 tokenizer.pad_token = tokenizer.eos_token
 ```
-
-### 初始化 PPOTrainer  
-`PPOTrainer` 负责后续的设备分配和优化：
-
-
+### PPOTrainer 초기화
+`PPOTrainer`은 후속 장비 할당 및 최적화를 담당합니다.
 ```python
 ppo_trainer = PPOTrainer(
     config, model, ref_model, tokenizer, dataset=dataset, data_collator=collator
 )
 ```
-
-
-### 加载 BERT 分类器  
-我们加载了一个在 IMDB 数据集上微调过的 BERT 分类器。
-
-
+### BERT 분류기 로드
+IMDB 데이터세트에 미세 조정된 BERT 분류기를 로드했습니다.
 ```python
 device = ppo_trainer.accelerator.device
 if ppo_trainer.accelerator.num_processes == 1:
@@ -177,13 +158,10 @@ sentiment_pipe = pipeline(
     "sentiment-analysis", model="model/distilbert-imdb", device=device
 )
 ```
-
-    Device set to use cuda:0
-
-
-模型输出的是负面类和正面类的 logits。我们将使用正面类的 logits 作为语言模型的奖励信号。
+cuda:0을 사용하도록 설정된 장치
 
 
+모델은 음수 및 양수 클래스의 로짓을 출력합니다. 우리는 포지티브 클래스의 로짓을 언어 모델의 보상 신호로 사용할 것입니다.
 ```python
 text = "this movie was really bad!!"
 sentiment_pipe(text, **sent_kwargs)
@@ -202,19 +180,13 @@ sentiment_pipe(text, **sent_kwargs)
 text = "this movie was really good!!"
 sentiment_pipe(text, **sent_kwargs)
 ```
+[{'라벨': '양성', '점수': 2.557040214538574},
+     {'라벨': 'NEGATIVE', '점수': -2.294790267944336}]
 
 
 
-
-    [{'label': 'POSITIVE', 'score': 2.557040214538574},
-     {'label': 'NEGATIVE', 'score': -2.294790267944336}]
-
-
-
-### 生成设置  
-对于响应生成，我们仅使用采样方法，并确保关闭 top-k 和核采样（nucleus sampling），同时设置一个最小长度。
-
-
+### 빌드 설정
+응답 생성을 위해 샘플링 방법만 사용하고 top-k 및 커널 샘플링을 끄고 최소 길이를 설정합니다.
 ```python
 gen_kwargs = {
     "min_length": -1,
@@ -224,17 +196,14 @@ gen_kwargs = {
     "pad_token_id": tokenizer.eos_token_id,
 }
 ```
+## 모델 최적화
 
-## 优化模型
+### 훈련 루프
 
-### 训练循环
-
-训练循环包括以下主要步骤：
-1. 从策略网络（GPT-2）中获取查询响应  
-2. 从 BERT 中获取查询/响应的情感  
-3. 使用 PPO 优化策略，利用（查询、响应、奖励）三元组  
-
-
+훈련 루프는 다음과 같은 주요 단계로 구성됩니다.
+1. 정책 네트워크(GPT-2)에서 쿼리 응답 받기
+2. BERT로부터 질의/응답 감정 얻기
+3. (쿼리, 응답, 보상) 삼중항을 활용한 PPO 최적화 전략을 사용합니다.
 ```python
 output_min_length = 4
 output_max_length = 16
@@ -278,24 +247,21 @@ for epoch, batch in enumerate(tqdm(ppo_trainer.dataloader)):
     stats = ppo_trainer.step(query_tensors, response_tensors, rewards)
     ppo_trainer.log_stats(stats, batch, rewards)
 ```
-
-      0%|          | 0/194 [00:00<?, ?it/s]The attention mask is not set and cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+0%| | 0/194 [00:00<?, ?it/s]The attention mask is not set and cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
       4%|▍         | 8/194 [01:23<32:18, 10.42s/it]You seem to be using the pipelines sequentially on GPU. In order to maximize efficiency please use a dataset
     100%|██████████| 194/194 [35:19<00:00, 10.92s/it]
 
 
-### 训练进展  
-如果你正在使用 Weights & Biases 跟踪训练进展，你应该会看到类似于下图的曲线。查看 wandb.ai 上的交互式示例报告：[链接](https://wandb.ai/huggingface/trl/runs/w9l3110g)。  
+### 훈련 진행
+훈련 진행 상황을 추적하기 위해 가중치 및 편향을 사용하는 경우 아래와 유사한 곡선이 표시됩니다. wandb.ai에서 대화형 예시 보고서를 확인하세요: [링크](https://wandb.ai/huggingface/trl/runs/w9l3110g).
 <div style="text-align: center">
 <img src='figs/gpt2_tuning_progress.png' width='800'>
-<p style="text-align: center;"> <b>图：</b> 训练期间奖励均值的演变 </p>
-</div>  
-可以观察到，经过几次优化步骤后，模型开始生成更积极的输出。  
+<p style="text-align: center;"> <b> 그림: </b> 훈련 중 보상 평균의 진화 </p>
+</div>
+여러 최적화 단계 후에 모델이 더 많은 긍정적인 결과를 생성하기 시작하는 것을 볼 수 있습니다.  
 
-## 模型检查  
-让我们从 IMDB 数据集中检查一些示例。我们可以使用 `ref_model` 来比较优化后的模型 `model` 与优化前的模型。
-
-
+## 모델 확인
+IMDB 데이터세트의 몇 가지 예를 살펴보겠습니다. `ref_model`를 사용하여 최적화된 모델 `model`을 사전 최적화된 모델과 비교할 수 있습니다.
 ```python
 #### get a batch from the dataset
 bs = 16
@@ -357,144 +323,143 @@ game_data["rewards (after)"] = positive_scores
 df_results = pd.DataFrame(game_data)
 df_results
 ```
-
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
       <th></th>
-      <th>query</th>
-      <th>response (before)</th>
-      <th>response (after)</th>
-      <th>rewards (before)</th>
-      <th>rewards (after)</th>
+      <th>쿼리</th>
+      <th>응답(이전)</th>
+      <th>응답(이후)</th>
+      <th>보상(이전)</th>
+      <th>보상(이후)</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <th>0</th>
-      <td>Well I guess I know</td>
-      <td>that Cantor may be an</td>
-      <td>..but I loved it</td>
+      <td>글쎄 나도 알아요</td>
+      <td>Cantor는</td>일 수 있습니다.
+      <td>..하지만 정말 좋았어요</td>
       <td>0.230196</td>
       <td>2.281557</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>This is an excellent,</td>
-      <td>direct-to-video film with typical</td>
-      <td>enjoyable movie.&lt;|endoftext|&gt;</td>
+      <td>정말 훌륭해요,</td>
+      <td>일반적인 방식의 직접 비디오 필름</td>
+      <td>즐거운 영화입니다.&lt;|텍스트 끝|></td>
       <td>2.846593</td>
       <td>2.840860</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>Now, I</td>
-      <td>'ve never had the chance with James</td>
-      <td>loved the growing episode - and the</td>
+      <td>이제, I</td>
+      <td> 제임스와 함께할 기회가 없었어요</td>
+      <td>은 성장하는 에피소드를 좋아했으며 </td>은(는)
       <td>0.656194</td>
       <td>2.525894</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>We tend</td>
-      <td>not to see Arthur</td>
-      <td>to like this very</td>
+      <td>우리는 경향이 있습니다</td>
+      <td>아서를 만나지 않으려면</td>
+      <td>이것을 매우 좋아합니다</td>
       <td>-0.280880</td>
       <td>2.183822</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>The proverb "Never judge a book</td>
-      <td>by the cover" has caught on. After glancing t...</td>
-      <td>with high compliments, but it is recommended ...</td>
+      <td>속담 "책을 판단하지 말라</td>
+      <td>by the 표지"가 인기를 끌었습니다. 유약 처리 후...</td>
+      <td>칭찬이 많지만 추천합니다...</td>
       <td>0.274649</td>
       <td>2.065951</td>
     </tr>
     <tr>
       <th>5</th>
-      <td>I've never understood</td>
-      <td>why so many artsmen,</td>
-      <td>this film but it's delightful</td>
+      <td>이해한 적이 없습니다</td>
+      <td>예술가가 왜 그렇게 많은지,</td>
+      <td>이 영화는 재미있지만</td>
       <td>0.835574</td>
       <td>2.782384</td>
     </tr>
     <tr>
       <th>6</th>
-      <td>Hugh (Ed Harris) is</td>
-      <td>an acclaimed "hero" and his fian</td>
-      <td>a wonderful actor who is a good adaptation</td>
+      <td>휴(에드 해리스)는</td>입니다
+      <td>칭찬받는 "영웅"과 그의 약혼자</td>
+      <td>적응이 좋은 멋진 배우</td>
       <td>1.580167</td>
       <td>2.602940</td>
     </tr>
     <tr>
       <th>7</th>
-      <td>This particular Joe McDoakes</td>
-      <td>' episode brought all the wrong bits and</td>
-      <td>movie is really a great movie. It</td>
+      <td>이 특별한 Joe McDoakes</td>
+      <td>' 에피소드에서 모든 잘못된 부분이 발생했고 </td>
+      <td>movie는 정말 훌륭한 영화입니다. 그것</td>
       <td>0.870956</td>
       <td>2.795245</td>
     </tr>
     <tr>
       <th>8</th>
-      <td>Sisters In</td>
-      <td>Vrooms 8.23, I signed up for all of the</td>
-      <td>The Universe 1: Sunny is cute, and has a cute...</td>
+      <td>자매들</td>
+      <td>Vrooms 8.23, </td> 전체에 가입했습니다.
+      <td>우주1: 써니는 귀엽고, 귀엽기도 하고...</td>
       <td>1.175259</td>
       <td>2.062330</td>
     </tr>
     <tr>
       <th>9</th>
-      <td>I was very fond of this</td>
-      <td>film, it was obviously a bad idea when first ...</td>
-      <td>show, and know that I have seen it several times</td>
+      <td>나는 이것을 매우 좋아했습니다</td>
+      <td>필름, 처음에는 분명히 나쁜 생각이었습니다...</td>
+      <td>쇼, 내가 여러 번 본 것을 알아두세요</td>
       <td>1.058164</td>
       <td>2.511273</td>
     </tr>
     <tr>
       <th>10</th>
-      <td>If he wanted to be</td>
-      <td>funny, he could</td>
-      <td>a genius eventually,</td>
+      <td>그가 되고 싶다면</td>
+      <td>재밌네요, 그는 </td> 할 수 있습니다
+      <td>결국 천재,</td>
       <td>-0.388943</td>
       <td>0.405888</td>
     </tr>
     <tr>
       <th>11</th>
-      <td>Thats My</td>
-      <td>Grade...&lt;br /&gt;&lt;br /&gt;Although</td>
-      <td>Way was the best movie that I watched.</td>
+      <td>그건 내꺼야</td>
+      <td>등급...&lt;br /&gt;&lt;br /&gt;</td>에도 불구하고
+      <td>Way는 제가 본 최고의 영화였습니다.</td>
       <td>-0.151680</td>
       <td>2.473050</td>
     </tr>
     <tr>
       <th>12</th>
-      <td>This is possibly the best short</td>
-      <td>film I have come across in almost two years.</td>
-      <td>film ever written. It has some very memorable...</td>
+      <td>이것은 아마도 가장 좋은 단편일 것입니다</td>
+      <td>약 2년만에 만난 영화</td>
+      <td>영화가 작성된 적이 있습니다. 매우 기억에 남는 내용이 있습니다...</td>
       <td>2.511835</td>
       <td>2.775994</td>
     </tr>
     <tr>
       <th>13</th>
-      <td>Some people say this is</td>
-      <td>exactly what happens in Hollywood; where come...</td>
-      <td>a powerful film to listen to. It really captures</td>
+      <td>어떤 사람들은 이것이</td>라고 말합니다.
+      <td>할리우드에서 정확히 무슨 일이 일어나는지; 어디로...</td>
+      <td>청취할 만한 강력한 영화입니다. 정말 </td>을 포착합니다.
       <td>0.637631</td>
       <td>2.821085</td>
     </tr>
     <tr>
       <th>14</th>
-      <td>A remake of</td>
-      <td>"The Wizard of Oz</td>
-      <td>the legendary Kingan oil</td>
+      <td></td>의 리메이크
+      <td>"오즈의 마법사</td>
+      <td>전설적인 킹간 오일</td>
       <td>0.292409</td>
       <td>0.434021</td>
     </tr>
     <tr>
       <th>15</th>
-      <td>What a terrible</td>
-      <td>movie!&lt;|endoftext|&gt;</td>
-      <td>chopping sounded so good, I love it! We have a</td>
+      <td>정말 끔찍하네요</td>
+      <td>영화!<|텍스트 끝|></td>
+      <td>다지는 소리가 너무 좋아서 너무 좋아요! 우리는 </td>을 가지고 있습니다
       <td>-2.681461</td>
       <td>2.340650</td>
     </tr>
@@ -502,9 +467,7 @@ df_results
 </table>
 
 
-通过观察生成序列的奖励均值/中位数，我们发现了显著的差异。
-
-
+생성된 시퀀스의 평균/중간 보상을 살펴보면서 중요한 차이점을 발견했습니다.
 ```python
 print("mean:")
 display(df_results[["rewards (before)", "rewards (after)"]].mean())
@@ -512,26 +475,23 @@ print()
 print("median:")
 display(df_results[["rewards (before)", "rewards (after)"]].median())
 ```
+의미:
 
-    mean:
-
-    rewards (before)    0.591666
-    rewards (after)     2.243934
+    보상 (이전) 0.591666
+    보상 (이후) 2.243934
     dtype: float64
 
 
-​    
-    median:
+​
+    중앙값:
 
-    rewards (before)    0.646912
-    rewards (after)     2.492161
+    보상 (이전) 0.646912
+    보상 (이후) 2.492161
     dtype: float64
 
 
-## 保存模型  
-最后，我们保存模型以供后续使用。
-
-
+## 모델 저장
+마지막으로 나중에 사용할 수 있도록 모델을 저장합니다.
 ```python
 model.save_pretrained("model/gpt2-imdb-pos-v2")
 tokenizer.save_pretrained("model/gpt2-imdb-pos-v2")

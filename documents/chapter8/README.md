@@ -1,88 +1,86 @@
-# 动手学大模型：多模态大语言模型
+# 대형 모델 실습 학습: 다중 모드 대형 언어 모델
 
-导读: 该部分介绍多模态大语言模型的常见架构以及构建方法
+소개: 이 섹션에서는 다중 모드 대형 언어 모델의 일반적인 아키텍처 및 구성 방법을 소개합니다.
 
-> 大语言模型的出现让大家看到，高阶的智能在语言模态上得到了充分的体现。作为能够更充分模拟真实世界的多模态大语言模型，其如何实现更强大的多模态理解和生成能力？多模态大语言模型是否能够帮助实现AGI？
-
-
-## 本教程目标
-
-1. 熟悉多模态大语言模型的类型
-2. 掌握多模态大语言模型的通用技术框架
-3. 掌握多模态大语言模型的搭建、训练和推理
+> 대규모 언어 모델의 출현으로 모든 사람은 고차원 지능이 언어 양식에 완전히 반영된다는 것을 알 수 있습니다. 실제 세계를 더욱 완벽하게 시뮬레이션할 수 있는 다중 모드 대형 언어 모델로서 어떻게 보다 강력한 다중 모드 이해 및 생성 기능을 달성할 수 있습니까? 다중 모드 대형 언어 모델이 AGI 달성에 도움이 될 수 있습니까?
 
 
+## 이 튜토리얼의 목표
 
-## 1. 理论知识预备
+1. 다중 모드 대형 언어 모델의 유형에 익숙합니다.
+2. 다중 모드 대형 언어 모델의 일반적인 기술 프레임워크를 마스터합니다.
+3. 다중 모드 대형 언어 모델의 구성, 훈련 및 추론을 마스터하세요.
 
 
 
-### 1.1 了解多模态大语言模型的类型
-
-- 现有多模态大语言模型的功能、模态支持分类
+## 1. 이론적 지식 준비
 
 
-> 在构建多模态大语言模型（MLLM）之前，本领域的研究者们都达成了一个共识、一个关键前提：由于规模定律和新兴现象，当前基于语言的LLM已经具有了强大的语义理解能力，这意味着语言已经成为承载智能的关键模态，所以语言智能被认为是多模态智能的枢纽。因此，几乎所有的MLLM都是建立在基于语言的LLM之上的，我这LLM作为核心决策模块，类似于大脑或中央处理器。换句话说，通过添加额外的外部非文本模态模块或编码器，LLM被赋予了多模态感知/操作能力。
 
-我们将现有的MLLM根据其模态支持、功能支持情况，划分为不同的类型。
+### 1.1 다중 모드 대형 언어 모델의 유형 이해
+
+- 기존 멀티모달 대형 언어 모델의 기능 분류 및 모달 지원
+
+
+> 다중 모드 대형 언어 모델(MLLM)을 구축하기 전에 이 분야의 연구자들은 합의와 핵심 전제에 도달했습니다. 규모의 법칙과 새로운 현상으로 인해 현재 언어 기반 LLM은 이미 강력한 의미 이해 기능을 갖추고 있습니다. 이는 언어가 지능을 전달하는 핵심 양식이 되었음을 의미하므로 언어 지능이 다중 모드 지능의 허브로 간주됩니다. 따라서 거의 모든 MLLM은 두뇌 또는 중앙 처리 장치와 유사한 핵심 의사 결정 모듈 역할을 하는 언어 기반 LLM을 기반으로 구축되었습니다. 즉, 외부 비텍스트 모달 모듈이나 인코더를 추가함으로써 LLM에는 다중 모드 인식/작동 기능이 부여됩니다.
+
+기존 MLLM을 모달 지원과 기능 지원에 따라 다양한 유형으로 구분합니다.
 
 ![mllm](assets/MLLM-summary.png)
 
 
-- 阅读完整教程：[[Slides](https://github.com/Lordog/dive-into-llms/blob/main/documents/chapter6/mllms.pdf)] 
+- 전체 튜토리얼 읽기: [[슬라이드](https://github.com/gidaseul/dive-into-llms/blob/main/documents/chapter6/mllms.pdf)]
 
 
-- 更多相关综述
-    - [A Survey on Multimodal Large Language Models, https://github.com/BradyFU/Awesome-Multimodal-Large-Language-Models, 2023](https://github.com/BradyFU/Awesome-Multimodal-Large-Language-Models)
-    - [MM-LLMs: Recent Advances in MultiModal Large Language Models, 2023](https://arxiv.org/pdf/2401.13601)
+- 관련 리뷰 더보기
+    - [멀티모달 대형 언어 모델에 관한 조사, https://github.com/BradyFU/Awesome-Multimodal-Large-Language-Models, 2023](https://github.com/BradyFU/Awesome-Multimodal-Large-Language-Models)
+    - [MM-LLM: 다중 모달 대형 언어 모델의 최근 발전, 2023](https://arxiv.org/pdf/2401.13601)
 
 
-### 1.2 了解多模态大语言模型的通用技术框架
+### 1.2 다중 모드 대형 언어 모델의 일반적인 기술 프레임워크 이해
 
 
-- 架构一：LLM as Task Scheduler
+- 아키텍처 1: 작업 스케줄러로서의 LLM
 
-> 目前社区存在两种常见的MLLM架构。
-第一种是“LLM作为离散调度器/控制器”的架构。如下图所示，LLM的角色是接收文本信号并向下游模块发出文本命令。系统内部的所有消息传递都是通过LLM输出的纯文本命令作为媒介进行的。不同的功能模块之间不存在交互。
-
-
-![Architecture1](assets/Architecture1.png)
-
-- 架构二：LLM as Joint Part of System
-
-> 第二种架构，编码器-LLM-解码器框架。
-这也是目前最流行的架构。其中LLM的角色是感知多模态信息，并在一个编码器-LLM-解码器的结构中自行做出响应和操作。因此，这个架构跟第一章架构的关键区别在于：LLM作为系统的关键联合部分，直接从外部接收多模态信息，并以更顺畅的方式委派指令给解码器/生成器。在编码器-LLM-解码器框架中，如下图所示，编码器处理来自多个模态的编码信号，LLM充当核心决策者，而解码器管理多模态输出。
-
-![Architecture2](assets/Architecture2.png)
+> 현재 커뮤니티에는 두 가지 일반적인 MLLM 아키텍처가 있습니다.
+첫 번째는 "이산 스케줄러/컨트롤러로서의 LLM" 아키텍처입니다. 아래 그림에서 볼 수 있듯이 LLM의 역할은 텍스트 신호를 수신하고 다운스트림 모듈에 텍스트 명령을 보내는 것입니다. 시스템 내의 모든 메시징은 LLM이 출력하는 일반 텍스트 명령을 통해 조정됩니다. 서로 다른 기능 모듈 간에는 상호 작용이 없습니다.
 
 
+![아키텍처1](assets/Architecture1.png)
+
+- 아키텍처 2: 시스템의 공동 부분인 LLM
+
+> 두 번째 아키텍처인 인코더-LLM-디코더 프레임워크입니다.
+이는 현재 가장 인기 있는 아키텍처이기도 합니다. LLM의 역할은 인코더-LLM-디코더 구조에서 다중 모드 정보를 인식하고 자체적으로 응답하고 작동하는 것입니다. 따라서 이 아키텍처와 1장의 아키텍처의 주요 차이점은 시스템의 주요 결합 부분인 LLM이 외부로부터 다중 모드 정보를 직접 수신하고 보다 원활한 방식으로 명령을 디코더/생성기에 위임한다는 점입니다. 아래 그림에 표시된 것처럼 인코더-LLM-디코더 프레임워크에서 인코더는 여러 양식의 인코딩된 신호를 처리하고, LLM은 핵심 의사 결정자 역할을 하며, 디코더는 다중 모드 출력을 관리합니다.
+
+![아키텍처2](assets/Architecture2.png)
 
 
 
-## 2. 上手实践通用多模态大语言模型
-
-> 实践“任意模态到任意模态”的通用多模态大语言模型的构建过程
 
 
-### 2.1 面向通用统一的“任意到任意模态”多模态大语言模型：NExT-GPT
+## 2. 일반 다중 모달 언어 모델 시작하기
 
-> 未来的MLLM研究一定是朝着越来越通用的generalist方向发展，所以会包含尽可能多的模态、功能。NExT-GPT是这个领域的目前最为开创性的一项工作之一，其首次引入了“任意到任意模态”MLLM的概念。这种架构实现了强大的功能，为未来的多模态大语言模型的研究方向奠定了基础。
+> "임의 모드에서 임의 모드로" 일반 멀티모달 대형 언어 모델의 구축 과정을 실습합니다.
+
+
+### 2.1 보편적 통합을 위한 "Any-to-Any 양식" 다중 모드 대형 언어 모델: NExT-GPT
+
+> 향후 MLLM 연구는 점점 더 일반화되는 방향으로 발전해야 하므로 가능한 한 많은 양식과 기능이 포함될 것입니다. NExT-GPT는 이 분야에서 가장 선구적인 연구 중 하나입니다. 'any-to-any 모드' MLLM 개념을 처음으로 도입했습니다. 이 아키텍처는 강력한 기능을 달성하고 다중 모드 대형 언어 모델의 미래 연구 방향을 위한 기반을 마련합니다.
 
 ![NExT-GPT](assets/NExT-GPT-screen.png)
 
 
-> 本次课程关于多模态大语言模型的代码实践部分，将会以NExT-GPT的代码为目标，进行深入浅出的分析和实践。
+> 본 강좌의 멀티모달 대형 언어 모델에 대한 코드 실습 부분에서는 NExT-GPT의 코드를 대상으로 심층 분석 및 실습을 진행합니다.
 
-[NExT-GPT Project](https://next-gpt.github.io/)
+[NExT-GPT 프로젝트](https://next-gpt.github.io/)
 
-[NExT-GPT GitHub 代码库](https://github.com/NExT-GPT/NExT-GPT)
-
-
+[NExT-GPT GitHub 저장소](https://github.com/NExT-GPT/NExT-GPT)
 
 
-### 2.2 代码框架浏览
 
 
+### 2.2 코드 프레임워크 탐색
 ```
 ├── figures
 ├── data
@@ -161,12 +159,9 @@
 ├── README.md
 └── requirements.txt
 ```
+### 2.3 설치 환경
 
-
-### 2.3 安装环境
-
-请先克隆仓库并安装所需的环境，可以通过运行以下命令来完成环境的安装：
-
+먼저 저장소를 복제하고 필요한 환경을 설치하십시오. 다음 명령을 실행하여 환경 설치를 완료할 수 있습니다.
 ```
 conda env create -n nextgpt python=3.8
 
@@ -180,131 +175,122 @@ cd NExT-GPT
 
 pip install -r requirements.txt
 ```
+### 2.4 시스템 추론 시작하기
 
 
+#### 2.4.1 사전 훈련된 NExT-GPT 모델 체크포인트 로드
+
+- **1단계**: `고정 파라미터`를 로드합니다. [NExT-GPT](https://github.com/NExT-GPT/NExT-GPT)는 다음과 같은 기존 모델 또는 모듈을 기반으로 학습됩니다.
+    - `ImageBind`은 통합 이미지/비디오/오디오 인코더입니다. 사전 훈련 체크포인트는 [여기](https://dl.fbaipublicfiles.com/imagebind/imagebind_huge.pth), 버전 `huge`에서 다운로드할 수 있습니다. 그런 다음 `imagebind_huge.pth` 파일을 [[./ckpt/pretrained_ckpt/imagebind_ckpt/huge]](ckpt/pretrained_ckpt/imagebind_ckpt/)에 배치합니다.
+    - `Vicuna`: 먼저 [[여기]](ckpt/pretrained_ckpt/prepare_vicuna.md)에 설명된 대로 LLaMA를 준비합니다. 그런 다음 사전 훈련된 모델을 [[./ckpt/pretrained_ckpt/vicuna_ckpt/]](ckpt/pretrained_ckpt/vicuna_ckpt/)에 배치합니다.
+    - `Image Diffusion`은 이미지를 생성하는 데 사용됩니다. NExT-GPT는 [Stable Diffusion](https://huggingface.co/runwayml/stable-diffusion-v1-5) 버전 `v1-5`을 사용합니다. (_코드는 자동으로 다운로드됩니다_)
+    - `Audio Diffusion`은 오디오 콘텐츠를 생성하는 데 사용됩니다. NExT-GPT는 [AudioLDM](https://github.com/haoheliu/AudioLDM) 버전 `l-full`을 사용합니다. (_코드는 자동으로 다운로드됩니다_)
+    - 비디오 생성을 위한 `Video Diffusion`. 버전 `v2_576w`에서는 [ZeroScope](https://huggingface.co/cerspense/zeroscope_v2_576w)를 사용합니다. (_코드는 자동으로 다운로드됩니다_)
+
+- **2단계**: `학습 가능한 파라미터`를 로드합니다.
+
+NExT-GPT 시스템을 [[./ckpt/delta_ckpt/nextgpt/7b_tiva_v0]](./ckpt/delta_ckpt/nextgpt/7b_tiva_v0)에 배치합니다. 1) 자체 학습된 매개변수를 사용하거나 2) [Huggingface](https://huggingface.co/ChocoWu/nextgpt_7b_tiva_v0)에서 사전 학습된 체크포인트를 다운로드하도록 선택할 수 있습니다.
 
 
-### 2.4 系统推理上手
+#### 2.4.2 Gradio 데모 배포
 
-
-#### 2.4.1 加载预训练的NExT-GPT模型checkpoint
-
-- **步骤1**：加载`冻结参数`。[NExT-GPT](https://github.com/NExT-GPT/NExT-GPT) 是基于以下现有模型或模块进行训练的, 请按照以下说明准备checkpoint。
-    - `ImageBind` 是统一的图像/视频/音频编码器。可以从[此处](https://dl.fbaipublicfiles.com/imagebind/imagebind_huge.pth)下载预训练检查点，版本为`huge`。然后，将`imagebind_huge.pth`文件放置在[[./ckpt/pretrained_ckpt/imagebind_ckpt/huge]](ckpt/pretrained_ckpt/imagebind_ckpt/)。
-    - `Vicuna`：首先按照[[这里]](ckpt/pretrained_ckpt/prepare_vicuna.md)的说明准备LLaMA。然后将预训练模型放置在[[./ckpt/pretrained_ckpt/vicuna_ckpt/]](ckpt/pretrained_ckpt/vicuna_ckpt/)。
-    - `Image Diffusion` 用于生成图像。NExT-GPT 使用版本为`v1-5`的[Stable Diffusion](https://huggingface.co/runwayml/stable-diffusion-v1-5)。(_代码里将会自动下载_)
-    - `Audio Diffusion` 用于生成音频内容。NExT-GPT 使用版本为`l-full`的[AudioLDM](https://github.com/haoheliu/AudioLDM)。(_代码里将会自动下载_)
-    - `Video Diffusion` 用于视频生成。我们使用版本为`v2_576w`的[ZeroScope](https://huggingface.co/cerspense/zeroscope_v2_576w)。(_代码里将会自动下载_)
-
-- **步骤2**：加载`可调参数`。
-
-将NExT-GPT系统放置在[[./ckpt/delta_ckpt/nextgpt/7b_tiva_v0]](./ckpt/delta_ckpt/nextgpt/7b_tiva_v0)。可以选择 1) 使用自己训练的参数，或者 2) 从[Huggingface](https://huggingface.co/ChocoWu/nextgpt_7b_tiva_v0)下载预训练好的checkpoint。
-
-
-#### 2.4.2 Gradio Demo部署
-
-完成检查点加载后，您可以通过以下方式在本地运行演示：
-```angular2html
+체크포인트가 로드되면 다음을 통해 로컬로 데모를 실행할 수 있습니다.
+```bash
 cd ./code
 bash scripts/app.sh
 ```
-指定关键参数如下：
-- `--nextgpt_ckpt_path`：预训练NExT-GPT参数的路径。
+다음과 같이 주요 매개변수를 지정합니다.
+- `--nextgpt_ckpt_path`: 사전 훈련된 NExT-GPT 매개변수의 경로입니다.
 
 
 
-#### 2.4.3 测试示例实践
+#### 2.4.3 테스트 예시 실습
 
-目前的版本能够支持文字、图像、视频、声音四种模态下任意组合的输入，并任务组合模态的输出。
-并且支持多轮上下文交互。
+현재 버전은 텍스트, 이미지, 비디오, 사운드의 네 가지 형식의 조합으로 입력을 지원할 수 있으며, 각 형식의 출력을 결합할 수 있습니다.
+그리고 여러 라운드의 컨텍스트 상호 작용을 지원합니다.
 
-请各位自行运行测试效果。
+테스트를 직접 실행해 보세요.
 
-- **Case-1**：输入T+I，输出T+A
+- **사례-1**: T+I 입력, T+A 출력
 
-![case1](assets/T+I-T+A.png)
+![사례1](assets/T+I-T+A.png)
 
 
-- **Case-2**：输入T+V，输出T+A
+- **사례-2**: T+V 입력, T+A 출력
 
 ![case2](assets/T+V-T+A.png)
 
 
-- **Case-3**：输入T+I，输出T+I+V
+- **사례-3**: 입력 T+I, 출력 T+I+V
 
-![case3](assets/T+I-T+I+V.png)
-
-
-- **Case-4**：输入T，输出T+I+V+A
-
-![case4](assets/T-T+I+V+A.png)
+![사례3](assets/T+I-T+I+V.png)
 
 
+- **사례-4**: 입력 T, 출력 T+I+V+A
+
+![사례4](assets/T-T+I+V+A.png)
 
 
 
 
 
-### 2.5 系统训练过程
 
 
-#### 2.5.1 数据准备
+### 2.5 시스템 훈련 과정
 
-请下载以下用于模型训练的数据集：
 
-A) T-X对数据
-  - ***文本-图像*** 对的 `CC3M` 数据，请按照此说明操作[[here]](./data/T-X_pair_data/cc3m/prepare.md)。然后将数据放置在[[./data/T-X_pair_data/cc3m]](./data/T-X_pair_data/cc3m)。
-  - ***文本-视频*** 对的 `WebVid` 数据，参考[[instruction]](./data/T-X_pair_data/webvid/prepare.md)。文件应保存在[[./data/T-X_pair_data/webvid]](./data/T-X_pair_data/webvid)。
-  - ***文本-音频*** 对的 `AudioCap` 数据，参考[[instruction]](./data/T-X_pair_data/audiocap/prepare.md)。将数据保存在[[./data/T-X_pair_data/audiocap]](./data/T-X_pair_data/audiocap)。
+#### 2.5.1 데이터 준비
 
-B) 指令微调数据
-  - T+X-T
-    - ***视觉指令数据*** (from `LLaVA`)，从[此处](https://github.com/haotian-liu/LLaVA/blob/main/docs/Data.md)下载，并将其放置在[[./data/IT_data/T+X-T_data/llava]](./data/IT_data/T+X-T_data/llava/)。
-    - ***文本指令数据*** (from `Alpaca`)，从[此处](https://github.com/tatsu-lab/stanford_alpaca)下载，并将其放置在[[./data/IT_data/T+X-T_data/alpaca/]](data/IT_data/T+X-T_data/alpaca/)。
-    - ***视频指令数据*** (from `VideoChat`)，从[此处](https://github.com/OpenGVLab/InternVideo/tree/main/Data/instruction_data)下载，并将其放置在[[./data/IT_data/T+X-T_data/videochat/]](data/IT_data/T+X-T_data/videochat/)。
+모델 학습을 위해 다음 데이터세트를 다운로드하세요.
 
-    注意：下载数据集后，请运行 `preprocess_dataset.py` 对数据集进行预处理，使其格式统一。
-  - T-X+T (T2M)
-    - `T-X+T` 指令数据集（T2M）保存在[[./data/IT_data/T-T+X_data]](./data/IT_data/T-T+X_data)。
+A) T-X 쌍 데이터
+  - ***텍스트-이미지*** `CC3M` 데이터의 경우 [[여기]](./data/T-X_pair_data/cc3m/prepare.md) 지침을 따르세요. 그런 다음 데이터를 [[./data/T-X_pair_data/cc3m]](./data/T-X_pair_data/cc3m)에 저장하세요.
+  - ***텍스트-비디오*** `WebVid` 데이터는 [[안내]](./data/T-X_pair_data/webvid/prepare.md)를 참조하세요. 파일은 [[./data/T-X_pair_data/webvid]](./data/T-X_pair_data/webvid)에 저장되어야 합니다.
+  - ***텍스트-오디오*** `AudioCap` 데이터는 [[안내]](./data/T-X_pair_data/audiocap/prepare.md)를 참조하세요. [[./data/T-X_pair_data/audiocap]](./data/T-X_pair_data/audiocap)에 데이터를 저장합니다.
+
+나) 명령어 미세조정 데이터
+  -T+X-T
+    - ***시각적 명령 데이터***(`LLaVA`에서), [여기](https://github.com/haotian-liu/LLaVA/blob/main/docs/Data.md)에서 다운로드하여 [[./data/IT_data/T+X-T_data/llava]](./data/IT_data/T+X-T_data/llava/)에 넣습니다.
+    - ***텍스트 명령 데이터***(`Alpaca`에서), [여기](https://github.com/tatsu-lab/stanford_alpaca)에서 다운로드하여 [[./data/IT_data/T+X-T_data/alpaca/]](data/IT_data/T+X-T_data/alpaca/)에 저장됩니다.
+    - ***비디오 명령 데이터***(`VideoChat`에서), [여기](https://github.com/OpenGVLab/InternVideo/tree/main/Data/instruction_data)에서 다운로드하여 [[./data/IT_data/T+X-T_data/videochat/]](data/IT_data/T+X-T_data/videochat/)에 넣습니다.
+
+    참고: 데이터 세트를 다운로드한 후 `preprocess_dataset.py`을 실행하여 데이터 세트를 전처리하여 형식을 균일하게 만드세요.
+  - T-X+T(T2M)
+    - `T-X+T` 명령 데이터 세트(T2M)는 [[./data/IT_data/T-T+X_data]](./data/IT_data/T-T+X_data)에 저장됩니다.
    
   - MosIT
-    - 从[这里](./data/IT_data/MosIT_data/)获得下载数据的说明。最终将其放置在[[./data/IT_data/MosIT_data/]](./data/IT_data/MosIT_data/)。
+    - [여기](./data/IT_data/MosIT_data/)에서 데이터 다운로드에 대한 지침을 확인하세요. 마지막으로 [[./data/IT_data/MosIT_data/]](./data/IT_data/MosIT_data/)에 배치됩니다.
 
 
 
 
-#### 2.5.2 嵌入向量准备
+2.5.2 임베딩 벡터 준비
 
-在NExT-GPT的解码端的对齐训练中，我们最小化Signal Token和captions的表征之间的距离。为了保证系统的高效率，节省时间和内存成本，我们使用各个扩散模型中的文本编码器预计算图像、音频和视频标题的文本嵌入。
-
-在进行NExT-GPT的训练之前，请运行以下命令，生成的 `embedding` 文件将保存在[[./data/embed]](./data/embed)。
+NExT-GPT의 디코더 측 정렬 훈련에서는 신호 토큰 표현과 캡션 사이의 거리를 최소화합니다. 시스템의 높은 효율성을 보장하고 시간과 메모리 비용을 절약하기 위해 각 확산 모델에서 텍스트 인코더를 사용하여 이미지, 오디오 및 비디오 타이틀에 대한 텍스트 임베딩을 미리 계산합니다.NExT-GPT를 훈련하기 전에 다음 명령을 실행하면 생성된 `embedding` 파일이 [[./data/embed]](./data/embed)에 저장됩니다.
 ```
 cd ./code/
 python process_embeddings.py ../data/T-X_pair_data/cc3m/cc3m.json image ../data/embed/ runwayml/stable-diffusion-v1-5
 ```
-
-
-参数说明：
-- args[1]: 标题文件路径；
-- args[2]: 模态，可以是 `image`、`video` 和 `audio`；
-- args[3]: 嵌入向量文件保存路径；
-- args[4]: 相应的预训练扩散模型名称。
+매개변수 설명:
+- args[1]: 타이틀 파일 경로;
+- args[2]: 모달, `image`, `video` 및 `audio`일 수 있습니다.
+- args[3]: 삽입된 벡터 파일 저장 경로;
+- args[4]: 해당 사전 학습된 확산 모델의 이름입니다.
 
 
 
 
-#### 2.5.3 三阶段式训练
+#### 2.5.3 3단계 훈련
 
 
-首先参考基础配置文件[[./code/config/base.yaml]](./code/config/base.yaml)，了解整个模块的基本系统设置。
+전체 모듈의 기본 시스템 설정을 이해하려면 먼저 기본 구성 파일 [[./code/config/base.yaml]](./code/config/base.yaml)을 참조하십시오.
 
-然后运行以下脚本开始NExT-GPT的训练：
+그런 다음 다음 스크립트를 실행하여 NExT-GPT 교육을 시작합니다.
 ```
 cd ./code
 bash scripts/train.sh
 ```
-
-指定命令如下：
+지정된 명령은 다음과 같습니다.
 ```
 deepspeed --include localhost:0 --master_addr 127.0.0.1 --master_port 28459 train.py \
     --model nextgpt \
@@ -312,36 +298,36 @@ deepspeed --include localhost:0 --master_addr 127.0.0.1 --master_port 28459 trai
     --save_path  ../ckpt/delta_ckpt/nextgpt/7b_tiva_v0/\
     --log_path ../ckpt/delta_ckpt/nextgpt/7b_tiva_v0/log/
 ```
-其中关键参数：
-- `--include`: `localhost:0` 表示深度速度中的 GPT cuda 编号 `0`。
-- `--stage`: 训练阶段。
-- `--save_path`: 存储训练后的 delta 权重的目录。此目录将自动创建。
-- `--log_path`: 存储日志文件的目录。
+주요 매개변수 중:
+- `--include`: `localhost:0`은 깊이 속도의 GPT 쿠다 수 `0`을 나타냅니다.
+- `--stage`: 훈련 단계.
+- `--save_path`: 훈련된 델타 가중치가 저장되는 디렉터리입니다. 이 디렉터리는 자동으로 생성됩니다.
+- `--log_path`: 로그 파일이 저장되는 디렉터리입니다.
 
 
 
-NExT-GPT的整个训练分为3个步骤：
+The entire training of NExT-GPT is divided into 3 steps:
 
-- **步骤1**：编码端LLM为中心的多模态对齐。该阶段训练***输入投影层***，同时冻结ImageBind、LLM和输出投影层。
+- **1단계**: 코더 측 LLM 중심 다중 모드 정렬. 이 단계에서는 입력 투영 레이어를 훈련하고 ImageBind, LLM 및 출력 투영 레이어를 동시에 고정합니다.
   
-  只需运行上述的`train.sh`脚本，并设置：`--stage 1`
+  위의 `train.sh` 스크립트를 실행하고 다음을 설정하세요. `--stage 1`
   
-  还请参考运行配置文件[[./code/config/stage_1.yaml]](./code/config/stage_1.yaml)和deepspeed配置文件[[./code/dsconfig/stage_1.yaml]](./code/dsconfig/stage_1.yaml)以获取更多逐步配置信息。
+  자세한 단계별 구성 정보는 실행 구성 파일 [[./code/config/stage_1.yaml]](./code/config/stage_1.yaml) 및 deepspeed 구성 파일 [[./code/dsconfig/stage_1.yaml]](./code/dsconfig/stage_1.yaml)을 참조하세요.
 
-  请注意，在此步骤中使用的数据集包含在`dataset_name_list`中，并且数据集名称必须与[[./code/dataset/catalog.py]](./code/dataset/catalog.py)中的定义精确匹配。
-
-
-
-- **步骤2**：解码端指令跟随对齐。该阶段训练***输出投影层***，同时冻结ImageBind、LLM和输入投影层。
-
-  只需运行上述的`train.sh`脚本，并设置：`--stage 2`
-
-  还请参考运行配置文件[[./code/config/stage_2.yaml]](./code/config/stage_2.yaml)和deepspeed配置文件[[./code/dsconfig/stage_2.yaml]](./code/dsconfig/stage_2.yaml)以获取更多逐步配置信息。
+  이 단계에 사용된 데이터 세트는 `dataset_name_list`에 포함되어 있으며 데이터 세트 이름은 [[./code/dataset/catalog.py]](./code/dataset/catalog.py)의 정의와 정확히 일치해야 합니다.
 
 
 
-- **步骤3**：指令调整。该阶段对指令数据集进行以下调整：1) 通过LoRA调整***LLM***，2) 调整***输入投影层***和3) 调整***输出投影层***。
+- **2단계**: 부차 지침 디코딩은 정렬을 따릅니다. 이 단계에서는 출력 투영 레이어를 훈련하고 ImageBind, LLM 및 입력 투영 레이어를 동시에 고정합니다.
 
-  只需运行上述的`train.sh`脚本，并设置：`--stage 3`
+  위의 `train.sh` 스크립트를 실행하고 다음을 설정하세요. `--stage 2`
 
-  还请参考运行配置文件[[./code/config/stage_3.yaml]](./code/config/stage_3.yaml)和deepspeed配置文件[[./code/dsconfig/stage_3.yaml]](./code/dsconfig/stage_3.yaml)以获取更多逐步配置信息。
+  자세한 단계별 구성 정보는 실행 구성 파일 [[./code/config/stage_2.yaml]](./code/config/stage_2.yaml) 및 deepspeed 구성 파일 [[./code/dsconfig/stage_2.yaml]](./code/dsconfig/stage_2.yaml)을 참조하세요.
+
+
+
+- **3단계**: 명령어 조정. 이 단계에서 명령 데이터 세트에 대해 다음 조정이 이루어집니다. 1) LoRA를 통한 ***LLM*** 조정, 2) ***입력 투영 레이어*** 조정 및 3) ***출력 투영 레이어*** 조정.
+
+  위의 `train.sh` 스크립트를 실행하고 다음을 설정하세요. `--stage 3`
+
+  자세한 단계별 구성 정보는 실행 구성 파일 [[./code/config/stage_3.yaml]](./code/config/stage_3.yaml) 및 deepspeed 구성 파일 [[./code/dsconfig/stage_3.yaml]](./code/dsconfig/stage_3.yaml)을 참조하세요.
